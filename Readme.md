@@ -1,4 +1,4 @@
-#Ensemble of LSTMs and feature selection for human action prediction
+# Ensemble of LSTMs and feature selection for human action prediction
 This is a pytorch implementation of the paper "Ensemble of LSTMs and feature selection for human action prediction" submitted to IAS-16 conference.
 The results published in the paper (http://arxiv.org/abs/2101.05645) have been obtained in MATLAB.
 

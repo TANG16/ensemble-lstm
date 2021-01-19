@@ -7,7 +7,7 @@ The results published in the paper (http://arxiv.org/abs/2101.05645) have been o
 - [ ] Train models proposed in the paper
 - [ ] Test models proposed in the paper
 
-#How to run
+# How to run
 Download the MoGaze dataset:
 ```
 mkdir data

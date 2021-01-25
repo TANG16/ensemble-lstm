@@ -40,10 +40,6 @@ class DatasetMaper(Dataset):
 
 
 class Execute:
-    """
-    Class for execution. Initializes the preprocessing as well as the
-    Tweet Classifier model
-    """
 
     def __init__(self, args):
         self.__init_data__(args.reload_data)
@@ -52,10 +48,6 @@ class Execute:
         self.model = LSTMBasic(args)
 
     def __init_data__(self, reload_data):
-        """
-        Initialize preprocessing from raw dataset to dataset split into training and testing
-        Training and test datasets are index strings that refer to tokens
-        """
 
         self.x_train, self.y_train = self.load_train_data(trainset, reload_data)
 

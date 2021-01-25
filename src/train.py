@@ -8,9 +8,19 @@ import torch.optim as optim
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import argument_parser as ap
-from config import mykeys, mydata, trainset, testset, goals, EVAL_TIME
+from config import (
+    mykeys,
+    mydata,
+    trainset,
+    testset,
+    goals,
+    EVAL_TIME,
+    STOP_TRAIN,
+    EVAL_STEP,
+)
 import os
 import pickle
+import matplotlib.pyplot as plt
 
 
 class DatasetMaper(Dataset):
@@ -36,66 +46,42 @@ class Execute:
     """
 
     def __init__(self, args):
-        self.__init_data__(args)
-
+        self.__init_data__(args.reload_data)
         self.args = args
         self.batch_size = args.batch_size
-
         self.model = LSTMBasic(args)
 
-    def __init_data__(self, args):
+    def __init_data__(self, reload_data):
         """
         Initialize preprocessing from raw dataset to dataset split into training and testing
         Training and test datasets are index strings that refer to tokens
         """
 
-        self.x_train, self.y_train = self.get_data(trainset)
+        self.x_train, self.y_train = self.load_train_data(trainset, reload_data)
 
-    def get_data(self, trainset):
-        x_train = []
-        y_train = []
-        for dataset in ["1_1"]:  # trainset
-            segments = os.listdir(f"../data/processed/{dataset}")
-            for segment in segments:
-                for goal_id in range(len(goals)):
-                    goal = goals[goal_id]
-                    with open(
-                        f"../data/processed/{dataset}/{segment}/{goal}.pkl", "rb"
-                    ) as f:
-                        data = pickle.load(f)
-                        features = []
-                        for key in mykeys:
-                            features.append(data[key + " euc"])
-                            features.append(data[key + " ori"])
-                        x_train.append(np.transpose(np.array(features)))
-                        truth = data["label"]
-                        y_train.append(int(truth))
-
-        # print(len(x_train), len(y_train))
-        # print(x_train[0])
-        return x_train, np.transpose(np.array(y_train))
+    def load_train_data(self, trainset, reload_data):
+        if reload_data == True:
+            return ut.load_train_data(trainset)
+        x_train = ut.load_pickle("../data/train_x.pkl")
+        y_train = ut.load_pickle("../data/train_y.pkl")
+        return x_train, y_train
 
     def train(self):
 
         training_set = DatasetMaper(self.x_train, self.y_train)
-        # test_set = DatasetMaper(self.x_test, self.y_test)
-        # print(training_set.x)
-        self.loader_training = DataLoader(training_set, batch_size=self.batch_size)
-        # self.loader_test = DataLoader(test_set)
-
-        optimizer = optim.RMSprop(self.model.parameters(), lr=args.learning_rate)
+        self.loader_training = DataLoader(
+            training_set, batch_size=self.batch_size, collate_fn=ut.pad_start
+        )
+        optimizer = optim.Adam(self.model.parameters(), lr=args.learning_rate)
         for epoch in range(args.epochs):
 
             predictions = []
             self.model.train()
             for x_batch, y_batch in self.loader_training:
-
                 x = x_batch.type(torch.FloatTensor)
                 y = y_batch.type(torch.FloatTensor).unsqueeze(1)
 
                 y_pred = self.model(x)
-
-                # print(y, y_pred)
 
                 loss = F.binary_cross_entropy(y_pred, y)
 
@@ -107,15 +93,21 @@ class Execute:
 
                 predictions += list(y_pred.squeeze().detach().numpy())
 
-            # test_predictions = self.evaluation()
-
             train_accuary = self.calculate_accuray(self.y_train, predictions)
-            # test_accuracy = self.calculate_accuray(self.y_test, test_predictions)
-
             print(
-                "Epoch: %d, loss: %.5f, Train accuracy: %.5f, Test accuracy: %.5f"
-                % (epoch + 1, loss.item(), train_accuary, 0)
+                f"Epoch: {epoch + 1}, loss: {loss.item():.5f}, Train accuracy: {train_accuary:.5f}"
             )
+            # if train_accuary > STOP_TRAIN:
+            #    break
+
+        with open(f"../models/lstm.pkl", "wb") as f:
+            pickle.dump(self.model, f)
+
+        # this code is for devel purposes:
+        # good_predictons, total_examples = ut.evaluate_net(self.model, testset)
+        # test_accuracy = sum(good_predictons[0, :] / total_examples[0, :])
+        # plt.plot(range(EVAL_TIME), good_predictons[0, :] / total_examples[0, :])
+        # plt.show()
 
     def evaluation(self):
 

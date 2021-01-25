@@ -24,9 +24,6 @@ import matplotlib.pyplot as plt
 
 
 class DatasetMaper(Dataset):
-    """
-    Handles batches of dataset
-    """
 
     def __init__(self, x, y):
         self.x = x
